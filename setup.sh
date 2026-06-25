@@ -21,7 +21,7 @@ set -Eeuo pipefail
 VERSION="1.0"
 
 # >>> ОТРЕДАКТИРУЙ: raw-URL этого файла в твоём репозитории (нужно для install по curl) <<<
-SELF_URL_DEFAULT="https://raw.githubusercontent.com/CHANGE_ME/CHANGE_ME/refs/heads/main/mobile443.sh"
+SELF_URL_DEFAULT="https://raw.githubusercontent.com/YLisov/nft-mob443/refs/heads/main/setup.sh"
 SELF_URL="${MOBILE443_SELF_URL:-$SELF_URL_DEFAULT}"
 
 ACTION="${1:-install}"
