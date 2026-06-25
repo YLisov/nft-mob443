@@ -59,6 +59,13 @@ die() { echo "[$(date '+%F %T')] ERROR: $*" >&2; exit 1; }
 require_root() { [[ "$(id -u)" -eq 0 ]] || die "запусти от root"; }
 need_cmd()     { command -v "$1" >/dev/null 2>&1 || die "нет команды: $1"; }
 
+# временные файлы складываем в один каталог и сносим его на выходе.
+# (RETURN-trap с локальными переменными под set -u падает в вызывающей функции,
+#  а массив, наполняемый внутри $(...), не доходит до родителя — поэтому каталог.)
+WORKDIR="$(mktemp -d)"
+trap '[[ -n "${WORKDIR:-}" ]] && rm -rf "$WORKDIR"' EXIT
+mktmp() { mktemp -p "$WORKDIR"; }
+
 # поставить недостающие зависимости (nftables/jq/curl); coreutils/gawk проверяем
 ensure_deps() {
   local -a pkgs=()
@@ -122,7 +129,7 @@ clean_cidr_stream() {
 
 download_list() {
   local url="$1" dest="$2" label="$3" tmp new old min
-  tmp="$(mktemp)"; trap 'rm -f "$tmp"' RETURN
+  tmp="$(mktmp)"
   log "Качаю ${label}: ${url}"
   curl -fsS --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 60 "$url" \
     | clean_cidr_stream > "$tmp" || die "${label}: ошибка загрузки"
@@ -140,7 +147,7 @@ download_list() {
 resolve_mobile_allowlist() {
   [[ -f "$ASNS_FILE" ]] || die "нет файла ASN: $ASNS_FILE"
   local raw clean asn new old min
-  raw="$(mktemp)"; clean="$(mktemp)"; trap 'rm -f "$raw" "$clean"' RETURN
+  raw="$(mktmp)"; clean="$(mktmp)"
   log "Резолвлю мобильные ASN через RIPEstat"
   while IFS= read -r asn || [[ -n "$asn" ]]; do
     asn="$(sed 's/[[:space:]]*#.*$//' <<<"$asn" | tr -cd '0-9')"
@@ -187,7 +194,7 @@ emit_set_block() {
 
 apply_to_nft() {
   ensure_table_and_sets
-  local f; f="$(mktemp)"; trap 'rm -f "$f"' RETURN
+  local f; f="$(mktmp)"
   {
     [[ "$ENABLE_GOV"          == "true" ]] && emit_set_block "$SET_GOV"    "$GOV_FILE"
     [[ "$ENABLE_ANTISCANNER"  == "true" ]] && emit_set_block "$SET_ANTI"   "$ANTI_FILE"
