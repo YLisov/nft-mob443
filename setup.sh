@@ -9,9 +9,9 @@
 #    • ставит systemd timer (ежедневно) + restore при загрузке.
 #
 #  Использование:
-#    bash <(curl -Ls <RAW_URL_ЭТОГО_ФАЙЛА>)            # install (по умолчанию)
-#    bash <(curl -Ls <RAW_URL_ЭТОГО_ФАЙЛА>) update     # только обновить данные
-#    bash <(curl -Ls <RAW_URL_ЭТОГО_ФАЙЛА>) remove     # снести всё, что поставил скрипт
+#    bash <(curl -Ls https://raw.githubusercontent.com/YLisov/nft-mob443/refs/heads/main/setup.sh)            # install (по умолчанию)
+#    bash <(curl -Ls https://raw.githubusercontent.com/YLisov/nft-mob443/refs/heads/main/setup.sh) update     # только обновить данные
+#    bash <(curl -Ls https://raw.githubusercontent.com/YLisov/nft-mob443/refs/heads/main/setup.sh) remove     # снести всё, что поставил скрипт
 #
 #  Сеты и цепочку фильтрации создаёшь в своём nftables-конфиге заранее
 #  (см. блок mobile443 в table inet filter). Этот скрипт их только наполняет.
@@ -20,7 +20,8 @@ set -Eeuo pipefail
 
 VERSION="1.0"
 
-# >>> ОТРЕДАКТИРУЙ: raw-URL этого файла в твоём репозитории (нужно для install по curl) <<<
+# raw-URL этого файла в репозитории (нужно для install по curl).
+# При необходимости переопредели через MOBILE443_SELF_URL.
 SELF_URL_DEFAULT="https://raw.githubusercontent.com/YLisov/nft-mob443/refs/heads/main/setup.sh"
 SELF_URL="${MOBILE443_SELF_URL:-$SELF_URL_DEFAULT}"
 
