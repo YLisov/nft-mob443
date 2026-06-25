@@ -59,6 +59,32 @@ die() { echo "[$(date '+%F %T')] ERROR: $*" >&2; exit 1; }
 require_root() { [[ "$(id -u)" -eq 0 ]] || die "запусти от root"; }
 need_cmd()     { command -v "$1" >/dev/null 2>&1 || die "нет команды: $1"; }
 
+# поставить недостающие зависимости (nftables/jq/curl); coreutils/gawk проверяем
+ensure_deps() {
+  local -a pkgs=()
+  command -v nft  >/dev/null 2>&1 || pkgs+=(nftables)
+  command -v jq   >/dev/null 2>&1 || pkgs+=(jq)
+  command -v curl >/dev/null 2>&1 || pkgs+=(curl)
+
+  if (( ${#pkgs[@]} > 0 )); then
+    log "Ставлю зависимости: ${pkgs[*]}"
+    if   command -v apt-get >/dev/null 2>&1; then
+      DEBIAN_FRONTEND=noninteractive apt-get update -y >/dev/null 2>&1 || true
+      DEBIAN_FRONTEND=noninteractive apt-get install -y "${pkgs[@]}"
+    elif command -v dnf >/dev/null 2>&1; then
+      dnf install -y "${pkgs[@]}"
+    elif command -v yum >/dev/null 2>&1; then
+      yum install -y "${pkgs[@]}"
+    else
+      die "не нашёл apt/dnf/yum — поставь вручную: ${pkgs[*]}"
+    fi
+  fi
+
+  # обязательные команды (в т.ч. те, что не ставим — должны быть в базовой системе)
+  need_cmd nft; need_cmd jq; need_cmd curl
+  need_cmd awk; need_cmd sed; need_cmd sort
+}
+
 # подтянуть конфиг (если есть) и вывести производные пути
 load_config() {
   # shellcheck disable=SC1090
@@ -142,7 +168,7 @@ ensure_table_and_sets() {
   local s
   for s in "$SET_GOV" "$SET_ANTI" "$SET_MOBILE"; do
     nft list set ${NFT_TABLE} "$s" >/dev/null 2>&1 \
-      || nft add set ${NFT_TABLE} "$s" { type ipv4_addr\; flag interval\; auto-merge\; }
+      || nft add set ${NFT_TABLE} "$s" { type ipv4_addr\; flags interval\; auto-merge\; }
   done
 }
 
@@ -362,8 +388,8 @@ cmd_update() {
 
 cmd_install() {
   require_root
-  need_cmd curl; need_cmd jq; need_cmd nft
-  need_cmd awk;  need_cmd sed; need_cmd sort; need_cmd systemctl
+  ensure_deps
+  need_cmd systemctl
   mkdir -p "$BASE_DIR" "$STATE_DIR"
   write_default_config
   write_default_asns
